@@ -57,7 +57,7 @@ public class Engine {
 		double multiplier = 300;
 		double adjacentForce = 17;
 		double disconnectedForce = .4;
-		double minLength = 0;
+		double minLength = 1;
 		if(dist == -1)
 			return -disconnectedForce;
 		if(dist == 1)
@@ -79,7 +79,7 @@ public class Engine {
 
 	private double getGravityForce(int length, int deg) {
 		double multiplier = .8;
-		double minLength = 10;
+		double minLength = 40;
 		if(length > minLength)
 			return (deg + 1) / multiplier;
 		else

@@ -1,8 +1,1 @@
-A force directed graph simulation that uses spring and gravitational forces to rearrange vertices on the screen, optimizing the potential energy of the system. Controls are a little complicated. 
-Click or 'X' -- new vertex; 
-Hold enter -- toggle edge command; 
-Hold 'Z' -- delete node command; 
-Shift -- works like backspace for commands; 
-'C' -- cancel a command; 
-'=' -- create a new random graph; 
-'F' -- toggle spring forces
+A force directed graph simulation that uses spring and gravitational forces to rearrange vertices on the screen, optimizing the potential energy of the system. Use clicking and dragging to create vertices and create and destroy edges. Hold 'D' while clicking to destroy a vertex. Create a new random graph with 'G'. Reset the screen with 'R'. Use 'F' to toggle spring forces.

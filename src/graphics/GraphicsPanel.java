@@ -3,6 +3,7 @@ package graphics;
 import geom.Graph;
 import geom.Point;
 
+import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -10,6 +11,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.util.HashSet;
@@ -19,30 +21,34 @@ import javax.swing.JPanel;
 
 import physics.Engine;
 
-public class GraphicsPanel extends JPanel implements KeyListener, MouseListener {
+public class GraphicsPanel extends JPanel implements KeyListener, MouseListener, MouseMotionListener {
 	private static final long serialVersionUID = 1L;
 
-	private static boolean CREATE_RANDOM_GRAPH = false;
-	
+	private static final int RANDOM_NUM_VERTICES = 25;
+	private static final int RANDOM_NUM_EDGES = 15;
+
+	private Random r;
 	private Engine engine;
 	private Graph graph;
 
 	private HashSet<Integer> keys;
-	private boolean editMode = false;
-	private String editCommand = "";
+	private Point mouseLocation;
+	private boolean mouseDown = false;
+	private int storeID = -1;
 
 	public GraphicsPanel() {
 		this.addKeyListener(this);
 		this.addMouseListener(this);
+		this.addMouseMotionListener(this);
 		this.setFocusable(true);
+		this.setCursor(GC.CURSOR_EDIT);
 
+		r = new Random();
 		graph = new Graph();
 		engine = new Engine(graph);
 
 		keys = new HashSet<Integer>();
-		
-		if(CREATE_RANDOM_GRAPH)
-			setRandomGraph();
+		mouseLocation = new Point(-1, -1);
 	}
 
 	public void refresh() {
@@ -50,20 +56,23 @@ public class GraphicsPanel extends JPanel implements KeyListener, MouseListener 
 		repaint();
 	}
 
+	private void resetGraph() {
+		graph = new Graph();
+		engine.setGraph(graph);
+	}
+
 	private void setRandomGraph() {
-		Random r = new Random();
-		int numVertices = 25;
-		int numEdges = 15;
-		
-		for(int i = 0; i < numVertices; i++)
+		resetGraph();
+
+		for(int i = 0; i < RANDOM_NUM_VERTICES; i++)
 			graph.add(r.nextInt(1000), r.nextInt(500));
-		for(int i = 0; i < numEdges; i++)
-			graph.addEdge(r.nextInt(numVertices), r.nextInt(numVertices));
-		for(int i = 0; i < numVertices; i++)
+		for(int i = 0; i < RANDOM_NUM_EDGES; i++)
+			graph.addEdge(r.nextInt(RANDOM_NUM_VERTICES), r.nextInt(RANDOM_NUM_VERTICES));
+		for(int i = 0; i < RANDOM_NUM_VERTICES; i++)
 			if(graph.getDegree(i) == 0)
 				graph.remove(i);
 	}
-	
+
 	@Override
 	public void paintComponent(Graphics g) {
 		Graphics2D g2 = (Graphics2D) g;
@@ -73,6 +82,30 @@ public class GraphicsPanel extends JPanel implements KeyListener, MouseListener 
 		g2.fillRect(0, 0, GC.SCREEN_WIDTH, GC.SCREEN_HEIGHT);
 		g2.setStroke(GC.STROKE_MAIN);
 
+		int finalID = -1;
+		for(int i = 0; i < graph.getSize(); i++) {
+			if(graph.exists(i)) {
+				Point p = graph.getPoint(i);
+				int distance = p.distance(mouseLocation.x, mouseLocation.y);
+				if(distance < GC.VERTEX_RADIUS_CLICK)
+					finalID = i;
+			}
+		}
+		
+		if(finalID != storeID && mouseDown && storeID != -1 && !keys.contains(KeyEvent.VK_D)) {
+			Color edgeColor;
+			if(finalID == -1)
+				edgeColor = GC.COLOR_EDGE_TRY;
+			else if(graph.isAdjacent(storeID, finalID))
+				edgeColor = GC.COLOR_EDGE_REMOVE;
+			else
+				edgeColor = GC.COLOR_EDGE_ADD;
+			g2.setColor(edgeColor);
+			Point p = graph.getPoint(storeID);
+			Line2D edgeToDraw = new Line2D.Double(p.x, p.y, mouseLocation.x, mouseLocation.y);
+			g2.draw(edgeToDraw);
+		}
+		
 		for(int i = 0; i < graph.getSize(); i++) {
 			if(graph.exists(i)) {
 				Point p1 = graph.getPoint(i);
@@ -80,42 +113,99 @@ public class GraphicsPanel extends JPanel implements KeyListener, MouseListener 
 					if(graph.exists(j) && graph.isAdjacent(i, j)) {
 						Point p2 = graph.getPoint(j);
 						g2.setColor(GC.COLOR_EDGE);
-						Line2D lineToDraw = new Line2D.Double(
-								p1.x + GC.VERTEX_RADIUS, p1.y + GC.VERTEX_RADIUS, 
-								p2.x + GC.VERTEX_RADIUS, p2.y + GC.VERTEX_RADIUS);
-						g2.draw(lineToDraw);
+						Line2D edgeToDraw = new Line2D.Double(p1.x, p1.y, p2.x , p2.y);
+						g2.draw(edgeToDraw);
 					}
 				}
 
 				g2.setColor(GC.COLOR_VERTEX);
 				Ellipse2D.Double vertexToDraw = new Ellipse2D.Double(
-						p1.x, p1.y, GC.VERTEX_RADIUS * 2, GC.VERTEX_RADIUS * 2);
+						p1.x - GC.VERTEX_RADIUS, p1.y - GC.VERTEX_RADIUS, 
+						GC.VERTEX_RADIUS * 2, GC.VERTEX_RADIUS * 2);
 				g2.fill(vertexToDraw);
 				g2.setColor(GC.COLOR_VERTEX.darker());
 				g2.draw(vertexToDraw);
-				g2.setColor(GC.COLOR_VERTEX_TEXT);
-				g2.setFont(GC.FONT_VERTEX);
-				int IDLength = (i + "").length();
-				int dx = GC.VERTEX_RADIUS * 2 - 13;
-				if(IDLength == 1)
-					dx += 2;
-				int dy = GC.VERTEX_RADIUS * 2 - 5;
-				g2.drawString(i + "", p1.x + dx, p1.y + dy);			
+//				g2.setColor(GC.COLOR_VERTEX_TEXT);
+//				g2.setFont(GC.FONT_VERTEX);
+//				int IDLength = (i + "").length();
+//				int dx = GC.VERTEX_RADIUS * 2 - 13 - GC.VERTEX_RADIUS;
+//				if(IDLength == 1)
+//					dx += 2;
+//				int dy = GC.VERTEX_RADIUS * 2 - 5 - GC.VERTEX_RADIUS;
+//				g2.drawString(i + "", p1.x + dx, p1.y + dy);
+
+
+			}
+		}
+	}
+
+	/*
+	 * F - Toggle forces
+	 * G - Random graph
+	 * R - Reset Screen
+	 * 
+	 * D - Delete node
+	 */
+
+	@Override
+	public void mousePressed(MouseEvent me) {
+		int x = me.getX();
+		int y = me.getY();
+		mouseDown = true;
+
+		for(int i = 0; i < graph.getSize(); i++) {
+			if(graph.exists(i)) {
+				Point p = graph.getPoint(i);
+				int distance = p.distance(x, y);
+				if(distance < GC.VERTEX_RADIUS_CLICK)
+					storeID = i;
 			}
 		}
 
-		if(editMode) {
-			g2.setColor(GC.COLOR_EDIT_BACKGROUND);
-			g2.fillRect(440, 240, 120, 70);
-			g2.setColor(GC.COLOR_EDIT_TEXT);
-			g2.setFont(GC.FONT_EDIT);
-			g2.drawString(editCommand, 460, 275);
+		if(keys.contains(KeyEvent.VK_D) && storeID != -1) {
+			graph.remove(storeID);
+			storeID = -1;
 		}
 	}
 
 	@Override
-	public void mousePressed(MouseEvent me) {
-		graph.add(me.getX(), me.getY());
+	public void mouseReleased(MouseEvent me) {
+		int x = me.getX();
+		int y = me.getY();
+		mouseDown = false;
+
+		if(storeID == -1 && !keys.contains(KeyEvent.VK_D))
+			graph.add(me.getX(), me.getY());
+		else {
+			int finalID = -1;
+			for(int i = 0; i < graph.getSize(); i++) {
+				if(graph.exists(i)) {
+					Point p = graph.getPoint(i);
+					int distance = p.distance(x, y);
+					if(distance < GC.VERTEX_RADIUS_CLICK)
+						finalID = i;
+				}
+			}
+
+			if(finalID != -1 && storeID != finalID) {
+				if(graph.isAdjacent(storeID, finalID))
+					graph.removeEdge(storeID, finalID);
+				else
+					graph.addEdge(storeID, finalID);
+			}
+		}
+
+		storeID = -1;
+	}
+
+	@Override
+	public void mouseMoved(MouseEvent me) {
+		mouseLocation.set(me.getX(), me.getY());
+	}
+
+	@Override
+	public void mouseDragged(MouseEvent me) {
+		mouseLocation.set(me.getX(), me.getY());
 	}
 
 	@Override
@@ -123,78 +213,23 @@ public class GraphicsPanel extends JPanel implements KeyListener, MouseListener 
 		int code = ke.getKeyCode();
 		keys.add(code);
 
-		if(code == KeyEvent.VK_ENTER || code == KeyEvent.VK_Z)
-			editMode = true;
-		else if(code == KeyEvent.VK_X)
-			graph.add(GC.SCREEN_WIDTH / 2, GC.SCREEN_HEIGHT / 2);
-		else if(code == KeyEvent.VK_C) {
-			editMode = false;
-			editCommand = "";
-		}
-		else if(code == KeyEvent.VK_EQUALS) {
-			graph = new Graph();
-			engine.setGraph(graph);
-			setRandomGraph();
-		}
-		else if(code == KeyEvent.VK_F)
+		if(code == KeyEvent.VK_F)
 			engine.toggleDistanceForce();
-
-		if(keys.contains(KeyEvent.VK_ENTER) || keys.contains(KeyEvent.VK_Z)) {
-			if(code == KeyEvent.VK_SHIFT)
-				if(editCommand.length() > 0)
-					editCommand = editCommand.substring(0, editCommand.length() - 1);
-			if((code >= KeyEvent.VK_0 && code <= KeyEvent.VK_9) || code == KeyEvent.VK_SPACE) {
-				if(editCommand.length() < 10)
-					editCommand += ke.getKeyChar();
-			}
-		}
+		else if(code == KeyEvent.VK_G)
+			setRandomGraph();
+		else if(code == KeyEvent.VK_R)
+			resetGraph();
+		else if(code == KeyEvent.VK_D)
+			this.setCursor(GC.CURSOR_DELETE);
 	}
 
 	@Override
 	public void keyReleased(KeyEvent ke) {
 		int code = ke.getKeyCode();
-		keys.remove(ke.getKeyCode());
+		keys.remove(code);
 
-		if(code == KeyEvent.VK_ENTER) {
-			editMode = false;
-			runCommand(true);
-			editCommand = "";
-		}
-		else if(code == KeyEvent.VK_Z) {
-			editMode = false;
-			runCommand(false);
-			editCommand = "";
-		}
-	}
-
-	private boolean runCommand(boolean edge) {
-		if(editCommand.length() == 0)
-			return false;
-		int spaceCount = 0;
-		for(char c : editCommand.toCharArray())
-			if(c == ' ')
-				spaceCount++;
-
-		if(spaceCount == 0 && edge == false) {
-			int index = Integer.parseInt(editCommand);
-			if(graph.exists(index)) {
-				graph.remove(index);
-				return true;
-			}
-		}
-		else if(spaceCount == 1 && edge == true) {
-			String[] parts = editCommand.split(" ");
-			int v1 = Integer.parseInt(parts[0]);
-			int v2 = Integer.parseInt(parts[1]);
-			if(graph.exists(v1) && graph.exists(v2)) {
-				if(graph.isAdjacent(v1, v2))
-					graph.removeEdge(v1, v2);
-				else
-					graph.addEdge(v1, v2);
-				return true;
-			}
-		}
-		return false;
+		if(code == KeyEvent.VK_D)
+			this.setCursor(GC.CURSOR_EDIT);
 	}
 
 	@Override
@@ -205,6 +240,4 @@ public class GraphicsPanel extends JPanel implements KeyListener, MouseListener 
 	public void mouseEntered(MouseEvent arg0) {}
 	@Override
 	public void mouseExited(MouseEvent arg0) {}
-	@Override
-	public void mouseReleased(MouseEvent arg0) {}
 }
