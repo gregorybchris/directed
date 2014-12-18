@@ -13,11 +13,11 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.geom.Ellipse2D;
-import java.awt.geom.Line2D;
 import java.util.HashSet;
 import java.util.Random;
 
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 import physics.Engine;
 
@@ -100,10 +100,9 @@ public class GraphicsPanel extends JPanel implements KeyListener, MouseListener,
 				edgeColor = GC.COLOR_EDGE_REMOVE;
 			else
 				edgeColor = GC.COLOR_EDGE_ADD;
-			g2.setColor(edgeColor);
 			Point p = graph.getPoint(storeID);
-			Line2D edgeToDraw = new Line2D.Double(p.x, p.y, mouseLocation.x, mouseLocation.y);
-			g2.draw(edgeToDraw);
+			g2.setColor(edgeColor);
+			g2.drawLine(p.x, p.y, mouseLocation.x, mouseLocation.y);
 		}
 		
 		for(int i = 0; i < graph.getSize(); i++) {
@@ -113,8 +112,7 @@ public class GraphicsPanel extends JPanel implements KeyListener, MouseListener,
 					if(graph.exists(j) && graph.isAdjacent(i, j)) {
 						Point p2 = graph.getPoint(j);
 						g2.setColor(GC.COLOR_EDGE);
-						Line2D edgeToDraw = new Line2D.Double(p1.x, p1.y, p2.x , p2.y);
-						g2.draw(edgeToDraw);
+						g2.drawLine(p1.x, p1.y, p2.x , p2.y);
 					}
 				}
 
@@ -162,7 +160,7 @@ public class GraphicsPanel extends JPanel implements KeyListener, MouseListener,
 			}
 		}
 
-		if(keys.contains(KeyEvent.VK_D) && storeID != -1) {
+		if((keys.contains(KeyEvent.VK_D) || SwingUtilities.isRightMouseButton(me)) && storeID != -1) {
 			graph.remove(storeID);
 			storeID = -1;
 		}
@@ -174,7 +172,7 @@ public class GraphicsPanel extends JPanel implements KeyListener, MouseListener,
 		int y = me.getY();
 		mouseDown = false;
 
-		if(storeID == -1 && !keys.contains(KeyEvent.VK_D))
+		if(storeID == -1 && !SwingUtilities.isRightMouseButton(me) && !keys.contains(KeyEvent.VK_D))
 			graph.add(me.getX(), me.getY());
 		else {
 			int finalID = -1;

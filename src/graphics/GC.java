@@ -1,5 +1,7 @@
 package graphics;
 
+import geom.Point;
+
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Cursor;
@@ -8,6 +10,7 @@ import java.awt.Font;
 public class GC {
 	public static final int SCREEN_WIDTH = 1000;
 	public static final int SCREEN_HEIGHT = 650;
+	public static final Point SCREEN_CENTER = new Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 	
 	public static final Color COLOR_BACKGROUND = new Color(30, 30, 30);
 	public static final Color COLOR_VERTEX = new Color(60, 60, 210);
@@ -22,7 +25,7 @@ public class GC {
 	public static final Color COLOR_EDIT_TEXT = new Color(0, 0, 0);
 	
 	public static final int VERTEX_RADIUS = 8;
-	public static final int VERTEX_RADIUS_CLICK = 13;
+	public static final int VERTEX_RADIUS_CLICK = 15;
 	public static final int EDGE_WIDTH = 4;
 	
 	public static final BasicStroke STROKE_MAIN = new BasicStroke(GC.EDGE_WIDTH);

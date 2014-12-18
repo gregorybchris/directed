@@ -7,6 +7,7 @@ import graphics.GC;
 public class Engine {
 	private Graph graph;
 
+	private boolean gravityForceOn = true;
 	private boolean clusterForceOn = true;
 	private boolean distanceForceOn = true;
 	private boolean proximityForceOn = true;
@@ -43,7 +44,8 @@ public class Engine {
 				for(int j = i + 1; j < graph.getSize(); j++)
 					if(i != j && graph.exists(j))
 						interract(i, j);
-				floatCenter(i);
+				if(gravityForceOn)
+					floatCenter(i);
 			}
 		}
 	}
@@ -78,12 +80,8 @@ public class Engine {
 	}
 
 	private double getGravityForce(int length, int deg) {
-		double multiplier = .8;
-		double minLength = 40;
-		if(length > minLength)
-			return (deg + 1) / multiplier;
-		else
-			return 0;
+		double multiplier = .4;
+		return deg * multiplier + 2;
 	}
 
 	private void interract(int v1, int v2) {
@@ -115,7 +113,7 @@ public class Engine {
 
 	private void floatCenter(int v) {
 		Point p = graph.getPoint(v);
-		Point c = new Point(GC.SCREEN_WIDTH / 2, GC.SCREEN_HEIGHT / 2);
+		Point c = GC.SCREEN_CENTER;
 		int length = p.distance(c);
 		int degree = graph.getDegree(v);
 
