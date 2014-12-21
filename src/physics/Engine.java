@@ -51,21 +51,21 @@ public class Engine {
 	}
 
 	private double getClusterForce(int degSum) {
-		double multiplier = 20;
+		double multiplier = 28;
 		return degSum / multiplier;
 	}
 
 	private double getDistanceForce(int dist, int length) {
-		double multiplier = 300;
-		double adjacentForce = 17;
-		double disconnectedForce = .4;
+		double distanceMultiplier = 275;
+		double adjacentForce = 18;
+		double disconnectedMultiplier = 0;
 		double minLength = 1;
 		if(dist == -1)
-			return -disconnectedForce;
+			return disconnectedMultiplier;
 		if(dist == 1)
 			return -adjacentForce;
 		else
-			return dist / (int)(length + minLength) * multiplier;
+			return (int)Math.pow(dist, 1.5) / (int)(length + minLength) * distanceMultiplier;
 	}
 
 	private double getProximityForce(int length) {
@@ -80,8 +80,9 @@ public class Engine {
 	}
 
 	private double getGravityForce(int length, int deg) {
-		double multiplier = .4;
-		return deg * multiplier + 2;
+		double multiplier1 = .6;
+		double multiplier2 = 150;
+		return (deg * multiplier1 + 2) * length / multiplier2;
 	}
 
 	private void interract(int v1, int v2) {
